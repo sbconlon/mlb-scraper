@@ -1,5 +1,6 @@
 # External imports
 import datetime
+import pytz
 import time
 
 # Internal imports
@@ -127,15 +128,32 @@ class Scrapper:
         self.games[dest][id] = self.games[orig][id]
         del self.games[orig][id]
 
+    # Returns the time until the next game starts in seconds.
+    def time_until_next_game(self, lines):
+        # Get the current time, in eastern timezone.
+        nowtime = datetime.datetime.now().astimezone(pytz.timezone('US/Eastern'))
+        # Get the next game start time, in eastern timezone, filtered s.t. we exclude games
+        # that have already started.
+        gametime = min([gtime for gtime in [to_eastern(game['commence_time']) for 
+                                            game in odds_response.json()] if gtime > nowtime])
+        # Calculate the difference in seconds.
+        secs = (gametime - nowtime).total_seconds()
+        # Assert that we don't have a negative time.
+        if secs < 0:
+            raise Exception(f"Invalid next game time, nowtime={nowtime.strftime('%Y-%m-%d %H:%M:%S')} gametime={gametime.strftime('%Y-%m-%d %H:%M:%S')}")
+        return secs
+
     def scrap(self, game_outpath, line_outpath, keyfile):
         webpage = Soup()
         linegen = LineGenerator(keyfile, GameState.get_id_prefix)
         while True:
             print(f"---> {datetime.date.today()} {datetime.datetime.now().strftime('%H:%M:%S')}")
+            
             # Time the soup was brewed and lines were generated.
             timestamp = datetime.datetime.now()
             # Get current lines.
             lines = linegen.get()
+            
             # Each game has its own soup that we must process.
             for soup in webpage.brew():
                 # Get the game id prefix for the game soup
@@ -172,7 +190,7 @@ class Scrapper:
                     # Find the GameState for the corresponding prefix
                     start_time = SoupParser.get_start_time(soup)
                     game = self.lookup_pregames(prefix, start_time)
-                    # Set start time if its not already.
+                    # Set start time if its not already set.
                     if not game.start_time:
                         game.start_time = start_time
                 #
@@ -190,18 +208,13 @@ class Scrapper:
                 else:
                     print('WARNING: Couldnt identify the game soup.')
                     print(SoupParser.parse_live(soup))
-
-            #print()
-            #print(f"Pre  game count: {len(self.games['pregame'])}")
-            #for pre_id in self.games['pregame'].keys():
-            #    print(pre_id)
-            #print(f"Live game count: {len(self.games['live'])}")
-            #for liv_id in self.games['live'].keys():
-            #    print(liv_id)
-            #print(f"Post game count: {len(self.games['final'])}")
-            #for fin_id in self.games['final'].keys():
-            #    print(fin_id)
-            #print()
+            
+            # Print line API usage statistics
             stats = linegen.usage()
             print('Remaining:', stats[0], ' Used:', stats[1])
-            time.sleep(60) # wait for 2.5 mins, approx. avg. at-bat length
+            
+            # Determine wait time.
+            # If we don't have a current game going, then wait for the next to start or in a hour.
+            # Else, pause for a minute, then continue scraping.
+            wait_time = 60 if self.games['live'] else min(self.time_until_next_game(lines), 60*60)
+            time.sleep(wait_time)
