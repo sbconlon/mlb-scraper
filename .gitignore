@@ -1,0 +1,10 @@
+# Byte compiled files
+__pycache__/
+*.py[cod]
+
+# Misc. notebooks
+notebooks/
+
+# Personal
+my_config.yaml
+my-config.yaml
