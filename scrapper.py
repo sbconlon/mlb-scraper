@@ -26,7 +26,9 @@ class Scrapper:
     #        multiple game ids, then it should be applied to the game that's
     #        active.
 
-    def __init__(self):
+    def __init__(self, alerter):
+        # Issue alerts
+        self.alerter = alerter
         # Game states
         # Games should transition from: pregame -> live -> final
         # They can not go backward.
@@ -35,6 +37,12 @@ class Scrapper:
                         'live': {},
                         'final': {}
                      }
+
+    # This function prints the given message to the console
+    # and issues an alert.
+    def notify(self, message):
+        print(message)
+        self.alerter.alert(message)
 
     # The lookup functions take a game prefix and match it to a game in the
     # games dictionary, or constructs a new game if a match is not found.
@@ -62,7 +70,7 @@ class Scrapper:
                            key=lambda g: g.start_time)[0]
         # Else, we need to create a new game
         id = GameState.new_game_id(prefix)
-        print(f'CREATING NEW LIVE GAME {id}')
+        self.notify(f'CREATING NEW LIVE GAME {id}')
         self.games['live'][id] = GameState(id)
         return self.games['live'][id]
 
@@ -78,7 +86,7 @@ class Scrapper:
             return self.games['pregame'][candidate[0]]
         # Else, if we have no prefix + start time matches, then make a new game.
         id = GameState.new_game_id(prefix)
-        print(f'CREATING NEW PREGAME {id}')
+        self.notify(f'CREATING NEW PREGAME {id}')
         self.games['pregame'][id] = GameState(id)
         return self.games['pregame'][id]
 
@@ -109,7 +117,7 @@ class Scrapper:
                         key=lambda g: g.start_time)[0]
         # Else, we create a new game.
         id = GameState.new_game_id(prefix)
-        print(f'CREATING NEW FINAL GAME {id}')
+        self.notify(f'CREATING NEW FINAL GAME {id}')
         self.games['final'][id] = GameState(id)
         return self.games['final'][id]
 
@@ -140,9 +148,11 @@ class Scrapper:
         secs = (gametime - nowtime).total_seconds()
         # Assert that we don't have a negative time.
         if secs < 0:
-            raise Exception(f"""Invalid next game time, nowtime={
+            message = f"""Invalid next game time, nowtime={
                               nowtime.strftime('%Y-%m-%d %H:%M:%S')} gametime={
-                              gametime.strftime('%Y-%m-%d %H:%M:%S')}""")
+                              gametime.strftime('%Y-%m-%d %H:%M:%S')}"""
+            self.notify(message)
+            raise Exception(message)
         return secs
 
     def scrap(self, game_outpath, line_outpath, keyfile):
@@ -172,7 +182,7 @@ class Scrapper:
                     game = self.lookup_live(prefix)
                     # Transition the game from pregame to live, if needed.
                     if game.id in self.games['pregame'].keys():
-                        print(f'TRANSITIONING {game.id} from pregame to live')
+                        self.notify(f'TRANSITIONING {game.id} from pregame to live')
                         self.transition(game.id, 'pregame', 'live')
                     # Update game state
                     game.update(timestamp,
@@ -202,32 +212,39 @@ class Scrapper:
                     game = self.lookup_final(prefix)
                     # Move the game to the final hash, if needed.
                     if game.id in self.games['pregame'].keys():
-                        print(f'TRANSITIONING {game.id} from pregame to final')
+                        self.notify(f'TRANSITIONING {game.id} from pregame to final')
                         self.transition(game.id, 'pregame', 'final')
                     elif game.id in self.games['live'].keys():
-                        print(f'TRANSITIONING {game.id} from live to final')
+                        self.notify(f'TRANSITIONING {game.id} from live to final')
                         self.transition(game.id, 'live', 'final')
                 else:
-                    print('WARNING: Couldnt identify the game soup.')
-                    print(SoupParser.parse_live(soup))
+                    self.notify('WARNING: Couldnt identify the game soup.')
+                    self.notify(SoupParser.parse_live(soup))
             
             # Print line API usage statistics
             stats = linegen.usage()
             print('Remaining:', stats[0], ' Used:', stats[1])
 
             # Check for stale live games.
-            for game in self.games['live']:
+            for game in self.games['live'].values(): 
                 # If a game in the live bucket hasn't been updated in a hour, then issue an alert.
                 if (datetime.datetime.now() - game.timestamp).total_seconds() > 3600:
-                    print(f"WARNING: {game.id} hasnt been updated in over an hour")
+                    self.notify(f"WARNING: {game.id} hasnt been updated in over an hour")
                 # If a game in the live bucket hasn't been updated in 5 hours, then drop it to the final bucket.
                 if (datetime.datetime.now() - game.timestamp).total_seconds() > 5*3600:
-                    print(f"""WARNING: {game.id} hasn't been updated in 5 hours.
+                    self.notify(f"""WARNING: {game.id} hasn't been updated in 5 hours.
                                        Transitioning it from live to final.""")
                     self.transition(game.id, 'live', 'final')
             
             # Determine wait time.
-            # If we don't have a current game going, then wait for the next to start or in a hour.
+            # If we don't have a current game going, then wait for the next to start or wait two hours.
+            if not self.games['live']:
+                wait_time = min(self.time_until_next_game(lines), 2*60*60)
+                wakeup_time = datetime.datetime.now() + datetime.timedelta(seconds=wait_time)
+                self.notify(f"""No live games, sleeping {wait_time} seconds. 
+                                Wakeup time at {wakeup_time.strftime('%Y-%m-%d %H:%M:%S')}""")
             # Else, pause for a minute, then continue scraping.
-            wait_time = 60 if self.games['live'] else min(self.time_until_next_game(lines), 2*60*60)
+            else:
+                wait_time = 60
+            # Sleep
             time.sleep(wait_time)
