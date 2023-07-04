@@ -140,7 +140,9 @@ class Scrapper:
         secs = (gametime - nowtime).total_seconds()
         # Assert that we don't have a negative time.
         if secs < 0:
-            raise Exception(f"Invalid next game time, nowtime={nowtime.strftime('%Y-%m-%d %H:%M:%S')} gametime={gametime.strftime('%Y-%m-%d %H:%M:%S')}")
+            raise Exception(f"""Invalid next game time, nowtime={
+                              nowtime.strftime('%Y-%m-%d %H:%M:%S')} gametime={
+                              gametime.strftime('%Y-%m-%d %H:%M:%S')}""")
         return secs
 
     def scrap(self, game_outpath, line_outpath, keyfile):
@@ -212,6 +214,17 @@ class Scrapper:
             # Print line API usage statistics
             stats = linegen.usage()
             print('Remaining:', stats[0], ' Used:', stats[1])
+
+            # Check for stale live games.
+            for game in self.games['live']:
+                # If a game in the live bucket hasn't been updated in a hour, then issue an alert.
+                if (datetime.datetime.now() - game.timestamp).total_seconds() > 3600:
+                    print(f"WARNING: {game.id} hasnt been updated in over an hour")
+                # If a game in the live bucket hasn't been updated in 5 hours, then drop it to the final bucket.
+                if (datetime.datetime.now() - game.timestamp).total_seconds() > 5*3600:
+                    print(f"""WARNING: {game.id} hasn't been updated in 5 hours.
+                                       Transitioning it from live to final.""")
+                    self.transition(game.id, 'live', 'final')
             
             # Determine wait time.
             # If we don't have a current game going, then wait for the next to start or in a hour.
