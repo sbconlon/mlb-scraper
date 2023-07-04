@@ -216,5 +216,5 @@ class Scrapper:
             # Determine wait time.
             # If we don't have a current game going, then wait for the next to start or in a hour.
             # Else, pause for a minute, then continue scraping.
-            wait_time = 60 if self.games['live'] else min(self.time_until_next_game(lines), 60*60)
+            wait_time = 60 if self.games['live'] else min(self.time_until_next_game(lines), 2*60*60)
             time.sleep(wait_time)

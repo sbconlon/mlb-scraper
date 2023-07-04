@@ -119,7 +119,7 @@ class SoupParser:
     # Either the game has a valid start time
     # Or it is in the 'warmup' state.
     def is_pregame(soup):
-        time_ptrn = re.compile(r'^\d?\d\:\d\d [AP]M ET$')
+        time_ptrn = re.compile(r'^\d?\d\:\d\d [AP]M ET')
         time = SoupParser.get_start_time(soup)
         return bool(time_ptrn.match(time))
 
