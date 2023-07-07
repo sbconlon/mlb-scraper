@@ -16,8 +16,11 @@ class Alert:
         self.recipient = reciever
     
     def alert(self, message):
-        server = smtplib.SMTP("smtp.gmail.com", 587)
-        server.starttls()
-        server.login(self.auth[0], self.auth[1])
-        server.sendmail(self.auth[0], self.recipient, message)
+        try:
+            server = smtplib.SMTP("smtp.gmail.com", 587)
+            server.starttls()
+            server.login(self.auth[0], self.auth[1])
+            server.sendmail(self.auth[0], self.recipient, message)
+        except:
+            print("WARNING: Failed to send alert message.")
 

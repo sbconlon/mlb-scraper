@@ -142,8 +142,7 @@ class Scrapper:
         nowtime = datetime.datetime.now().astimezone(pytz.timezone('US/Eastern'))
         # Get the next game start time, in eastern timezone, filtered s.t. we exclude games
         # that have already started.
-        gametime = min([gtime for gtime in [to_eastern(game['commence_time']) for 
-                                            game in odds_response.json()] if gtime > nowtime])
+        gametime = min([start_time for start_time, _ in lines.values() if start_time > nowtime])
         # Calculate the difference in seconds.
         secs = (gametime - nowtime).total_seconds()
         # Assert that we don't have a negative time.
@@ -241,8 +240,7 @@ class Scrapper:
             if not self.games['live']:
                 wait_time = min(self.time_until_next_game(lines), 2*60*60)
                 wakeup_time = datetime.datetime.now() + datetime.timedelta(seconds=wait_time)
-                self.notify(f"""No live games, sleeping {wait_time} seconds. 
-                                Wakeup time at {wakeup_time.strftime('%Y-%m-%d %H:%M:%S')}""")
+                self.notify(f"""No live games, sleeping {wait_time} seconds.\nWakeup time at {wakeup_time.strftime('%Y-%m-%d %H:%M:%S')}""")
             # Else, pause for a minute, then continue scraping.
             else:
                 wait_time = 60

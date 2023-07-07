@@ -102,12 +102,12 @@ class LineGenerator:
                         line_info.update(LineGenerator.process_spread(mpre, market, teams))
                     if market['key'] == 'totals':
                         line_info.update(LineGenerator.process_total(mpre, market))
-            games[id_prefix] = pd.Series(line_info)
+            games[id_prefix] = (start, pd.Series(line_info))
         return games
 
 
     # Queries the api and returns the formatted response
-    # Returns a dictionary game_id_prefix -> pd.series of line info
+    # Returns a dictionary game_id_prefix -> (commence_time, pd.series of line info)
     def get(self):
         return self.format_response(self.query())
 
