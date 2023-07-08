@@ -235,7 +235,6 @@ class Scrapper:
             
             # Determine wait time.
             # If we don't have a current game going, then wait for the next to start or wait two hours.
-            self.games['live']['dummy'] = 'Fake Game'
             if not self.games['live']:
                 wait_time = min(self.time_until_next_game(lines), 2*60*60)
                 wakeup_time = datetime.datetime.now() + datetime.timedelta(seconds=wait_time)
