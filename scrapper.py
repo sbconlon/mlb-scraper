@@ -141,11 +141,11 @@ class Scrapper:
     def time_until_next_game(self, lines):
         # Get the current time, in eastern timezone.
         nowtime = datetime.datetime.now().astimezone(pytz.timezone('US/Eastern'))
-        # Give a 30min buffer for games that start later than their listed start time.
-        nowtime -= datetime.timedelta(minutes=30)
         # Get the next game start time, in eastern timezone, filtered s.t. we exclude games
         # that have already started.
-        gametime = min([start_time for start_time, _ in lines.values() if start_time > nowtime-time])
+        # Note: Give a 30min buffer for games that start later than their listed start time.
+        gametime = min([start_time for start_time, _ in lines.values() if 
+                            start_time > nowtime-datetime.timedelta(minutes=30)])
         # Calculate the difference in seconds.
         secs = (gametime - nowtime).total_seconds()
         # If a game is starting later than its listed time then secs will be negative.
