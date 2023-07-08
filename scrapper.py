@@ -137,22 +137,20 @@ class Scrapper:
         del self.games[orig][id]
 
     # Returns the time until the next game starts in seconds.
+    # With a 30 min buffer for late start games, in which case 0 secs is returned.
     def time_until_next_game(self, lines):
         # Get the current time, in eastern timezone.
         nowtime = datetime.datetime.now().astimezone(pytz.timezone('US/Eastern'))
+        # Give a 30min buffer for games that start later than their listed start time.
+        nowtime -= datetime.timedelta(minutes=30)
         # Get the next game start time, in eastern timezone, filtered s.t. we exclude games
         # that have already started.
-        gametime = min([start_time for start_time, _ in lines.values() if start_time > nowtime])
+        gametime = min([start_time for start_time, _ in lines.values() if start_time > nowtime-time])
         # Calculate the difference in seconds.
         secs = (gametime - nowtime).total_seconds()
-        # Assert that we don't have a negative time.
-        if secs < 0:
-            message = f"""Invalid next game time, nowtime={
-                              nowtime.strftime('%Y-%m-%d %H:%M:%S')} gametime={
-                              gametime.strftime('%Y-%m-%d %H:%M:%S')}"""
-            self.notify(message)
-            raise Exception(message)
-        return secs
+        # If a game is starting later than its listed time then secs will be negative.
+        # Instead, we want to wait zero seconds.
+        return max(secs, 0)
 
     def scrap(self, game_outpath, line_outpath, keyfile):
         webpage = Soup()
@@ -186,7 +184,7 @@ class Scrapper:
                     # Update game state
                     game.update(timestamp,
                                 SoupParser.parse_live(soup),
-                                lines.get(prefix, None))
+                                lines.get(prefix, None)[1])
                     # Dump game state and line info
                     game.dump_state(game_outpath)
                     if not game.line_info is None:
@@ -231,12 +229,13 @@ class Scrapper:
                     self.notify(f"WARNING: {game.id} hasnt been updated in over an hour")
                 # If a game in the live bucket hasn't been updated in 5 hours, then drop it to the final bucket.
                 if (datetime.datetime.now() - game.timestamp).total_seconds() > 5*3600:
-                    self.notify(f"""WARNING: {game.id} hasn't been updated in 5 hours.
-                                       Transitioning it from live to final.""")
+                    self.notify(f"""WARNING: {game.id} hasn't been updated in 5 hours.\n
+                                    Transitioning from live to final.""")
                     self.transition(game.id, 'live', 'final')
             
             # Determine wait time.
             # If we don't have a current game going, then wait for the next to start or wait two hours.
+            self.games['live']['dummy'] = 'Fake Game'
             if not self.games['live']:
                 wait_time = min(self.time_until_next_game(lines), 2*60*60)
                 wakeup_time = datetime.datetime.now() + datetime.timedelta(seconds=wait_time)

@@ -15,6 +15,10 @@ class Soup:
         options = webdriver.ChromeOptions()
         options.add_argument('log-level=3')
         options.add_argument('--headless')
+        # Raspberry Pi driver substitution
+        #service = ChromeService(executable_path='/usr/bin/chromedriver') 
+        #self.driver = webdriver.Chrome(service=service,
+        #                               options=options)
         self.driver = webdriver.Chrome(ChromeDriverManager().install(),
                                        options=options)
         self.driver.implicitly_wait(5)
