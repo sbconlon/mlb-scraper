@@ -1,4 +1,6 @@
 import bs4 as bs
+import datetime
+import pytz
 #from urllib.request import Request, urlopen
 import re
 import requests
@@ -49,7 +51,7 @@ class SoupParser:
         except:
             return ''
 
-    def get_start_time(soup):
+    def get_start_time_str(soup):
         try:
             return soup.find('div', {'data-mlb-test': 'gameStartTimesStateLabel'}).text
         except:
@@ -122,10 +124,26 @@ class SoupParser:
     # Is the game yet to start?
     # Either the game has a valid start time
     # Or it is in the 'warmup' state.
+    time_ptrn = re.compile(r'^\d?\d\:\d\d [AP]M ET')
     def is_pregame(soup):
-        time_ptrn = re.compile(r'^\d?\d\:\d\d [AP]M ET')
-        time = SoupParser.get_start_time(soup)
-        return bool(time_ptrn.match(time))
+        time = SoupParser.get_start_time_str(soup)
+        return bool(SoupParser.time_ptrn.match(time))
+    
+    def get_start_time(soup):
+        start_str = SoupParser.time_ptrn.match(
+                        SoupParser.get_start_time_str(soup)    
+                    )
+        eastern = pytz.timezone('US/Eastern')
+        today = datetime.date.today().astimezone(eastern)
+        start_time = datetime.datetime.strptime(start_str, "%I:%M %p ET")
+        start_time.replace(year=today.year, month=today.month, day=today.day, tzinfo=eastern)
+        return start_time
+
+    # Checks if the given start time string is delayed.
+    # Note: start_str should be the output from SoupParser.get_start_time_str().
+    def is_delayed(soup):
+        delayed_ptrn = re.compile(r'Delayed Start')
+        return bool(delayed_ptrn.match(SoupParser.get_start_time_str(soup)))
 
     # Is the game for the soup live?
     # If the inning result has a valid prefix then the game is live.
@@ -138,11 +156,15 @@ class SoupParser:
     # Is the game for the soup final?
     def is_final(soup):
         final_ptrn = re.compile(r'Final')
-        return final_ptrn.match(SoupParser.get_final(soup))
+        return bool(final_ptrn.match(SoupParser.get_final(soup)))
+    
+    def is_postponed(soup):
+        postponed_ptrn = re.compile(r'Postponed')
+        return bool(postponed_ptrn.match(SoupParser.get_final(soup)))
 
     # Set of pregame parsing functions
     pre_funcs = {
-        'start_time': get_start_time,
+        'start_time': get_start_time_str,
         'teams':get_teams
     }
 

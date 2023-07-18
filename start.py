@@ -2,7 +2,7 @@ import argparse
 import yaml
 
 from alert import Alert
-from scrapper import Scrapper
+from scraper import Scraper
 
 parser = argparse.ArgumentParser()
 parser.add_argument('config')
@@ -18,11 +18,11 @@ alerter = Alert(config["sender"],
                 config["reciever"])
 
 # Start scrapper object, initializes games dictionary.
-bot = Scrapper(alerter)
+bot = Scraper(alerter)
 
 # Run 
 while True:
     try:
-        bot.scrap(config['game-outpath'], config['line-outpath'], args.config)
+        bot.scrape(config['game-outpath'], config['line-outpath'], args.config)
     except Exception as e:
         bot.notify("WARNING: Exception incountered, restarting scrape process.\n"+str(e))
