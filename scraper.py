@@ -195,7 +195,7 @@ class Scraper:
             # Time the soup was brewed and lines were generated.
             timestamp = datetime.datetime.now()
             # Get current lines.
-            lines = linegen.get()
+            lines = linegen.get_lines()
 
             # Initialize updated set to empty at the start of an iteration.
             self.updated = set()
@@ -222,7 +222,7 @@ class Scraper:
                     # Update game state
                     game.update(timestamp,
                                 SoupParser.parse_live(soup),
-                                lines.get(prefix, None)[1])
+                                lines.get(prefix, (None, None))[1])
                     # Add to updated set.
                     self.updated.add(game.id)
                     # Dump game state and line info
@@ -247,9 +247,16 @@ class Scraper:
                     self.updated.add(game.id)
                 #
                 # Parse post game or postponed game info.
-                elif SoupParser.is_final(soup) or SoupParser.is_postponed(soup):
+                elif (SoupParser.is_final(soup) or 
+                      SoupParser.is_postponed(soup) or
+                      SoupParser.is_suspended(soup)):
                     # Find the GameState for the corresponding prefix
                     game = self.lookup_final(prefix)
+                    # Notify if a live game is postponed or suspended.
+                    if game.id in self.games['live'].keys() and SoupParser.is_postponed(soup):
+                        self.notify(f'POSTPONED {game.id}')
+                    if game.id in self.games['live'].keys() and SoupParser.is_suspended(soup):
+                        self.notify(f'SUSPENDED {game.id}')
                     # Move the game to the final hash, if needed.
                     if game.id in self.games['pregame'].keys():
                         self.notify(f'TRANSITIONING {game.id} from pregame to final')

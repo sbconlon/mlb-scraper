@@ -108,7 +108,7 @@ class LineGenerator:
 
     # Queries the api and returns the formatted response
     # Returns a dictionary game_id_prefix -> (commence_time, pd.series of line info)
-    def get(self):
+    def get_lines(self):
         return self.format_response(self.query())
 
     # Returns usage stats

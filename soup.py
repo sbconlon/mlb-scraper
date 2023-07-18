@@ -142,8 +142,11 @@ class SoupParser:
     # Checks if the given start time string is delayed.
     # Note: start_str should be the output from SoupParser.get_start_time_str().
     def is_delayed(soup):
-        delayed_ptrn = re.compile(r'Delayed Start')
-        return bool(delayed_ptrn.match(SoupParser.get_start_time_str(soup)))
+        return 'Delayed Start' in SoupParser.get_start_time_str(soup)
+    
+    # Checks if a game is suspended.
+    def is_suspended(soup):
+        return 'Suspended' in SoupParser.get_start_time_str(soup)
 
     # Is the game for the soup live?
     # If the inning result has a valid prefix then the game is live.
@@ -151,7 +154,7 @@ class SoupParser:
     def is_live(soup):
         valid_innings = set(('Top', 'Bot', 'Mid', 'End'))
         inning = SoupParser.get_inning(soup)
-        return inning[:3] in valid_innings
+        return inning[:3] in valid_innings and not SoupParser.is_suspended(soup)
 
     # Is the game for the soup final?
     def is_final(soup):
