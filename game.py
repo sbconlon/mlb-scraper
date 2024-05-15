@@ -30,7 +30,8 @@ class GameState:
 
     # Get game id prefix.
     # Prefix = home team id + date
-    def get_id_prefix(name, strt_time=datetime.date.today()):
+    def get_id_prefix(name, strt_time=None):
+        strt_time = datetime.date.today() if strt_time == None else strt_time
         return GameState.get_team_id(name) + strt_time.strftime('%Y%m%d')
 
     # Make a game id for a new game, given the prefix.

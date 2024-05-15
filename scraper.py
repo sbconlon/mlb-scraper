@@ -205,7 +205,6 @@ class Scraper:
                 # Get the game id prefix for the game soup
                 teams = SoupParser.get_teams(soup)
                 prefix = GameState.get_id_prefix(teams[1])
-                print('Teams:', teams, ' Prefix:', prefix)
                 #
                 # Parse warmup games
                 if SoupParser.is_warmup(soup):
@@ -285,13 +284,19 @@ class Scraper:
                     self.transition(game.id, 'live', 'final')
             
             # Determine wait time.
-            # If we don't have a current game going, then wait for the next to start or wait two hours.
+            # If we don't have a current game going, then wait for the next to start (or wait two hours).
             if not self.games['live']:
-                wait_time = min(self.time_until_next_game(lines), 2*60*60)
+                wait_time = self.time_until_next_game(lines)
                 wakeup_time = datetime.datetime.now() + datetime.timedelta(seconds=wait_time)
                 self.notify(f"""No live games, sleeping {wait_time} seconds.\nWakeup time at {wakeup_time.strftime('%Y-%m-%d %H:%M:%S')}""")
             # Else, pause for a minute, then continue scraping.
             else:
                 wait_time = 60
+            # Close the webpage while we sleep
+            if wait_time > 60: 
+                webpage.close()
             # Sleep
             time.sleep(wait_time)
+            # Reopen the webpage
+            if wait_time > 60:
+                webpage.open()

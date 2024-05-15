@@ -14,23 +14,30 @@ class Soup:
     url = 'https://www.mlb.com/scores'
 
     def __init__(self):
-        options = webdriver.ChromeOptions()
-        options.add_argument('log-level=3')
-        options.add_argument('--headless')
         # Raspberry Pi driver substitution
         #service = ChromeService(executable_path='/usr/bin/chromedriver') 
         #self.driver = webdriver.Chrome(service=service,
         #                               options=options)
-        self.driver = webdriver.Chrome(ChromeDriverManager().install(),
-                                       options=options)
-        self.driver.implicitly_wait(5)
-        self.driver.get(Soup.url)
+        self.open()
 
     def brew(self):
         soup = bs.BeautifulSoup(self.driver.page_source, 'html.parser')
         return soup.find('main'
                         ).find('div', {'id': 'scores-schedule-root'}
                         ).find_all('div', {'data-test-mlb': 'singleGameContainer'})
+    
+    def open(self):
+        options = webdriver.ChromeOptions()
+        options.add_argument('log-level=3')
+        options.add_argument('--headless')
+        self.driver = webdriver.Chrome(ChromeDriverManager().install(),
+                                       options=options)
+        self.driver.implicitly_wait(5)
+        self.driver.get(Soup.url)
+
+    def close(self):
+        self.driver.quit()
+        self.driver = None
 
 
     """
@@ -132,9 +139,9 @@ class SoupParser:
     def get_start_time(soup):
         start_str = SoupParser.time_ptrn.match(
                         SoupParser.get_start_time_str(soup)    
-                    )
+                    ).group(0)
         eastern = pytz.timezone('US/Eastern')
-        today = datetime.date.today().astimezone(eastern)
+        today = datetime.datetime.now().astimezone(eastern)
         start_time = datetime.datetime.strptime(start_str, "%I:%M %p ET")
         start_time.replace(year=today.year, month=today.month, day=today.day, tzinfo=eastern)
         return start_time

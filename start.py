@@ -22,7 +22,7 @@ bot = Scraper(alerter)
 
 # Run 
 while True:
-    try:
-        bot.scrape(config['game-outpath'], config['line-outpath'], args.config)
-    except Exception as e:
-        bot.notify("WARNING: Exception incountered, restarting scrape process.\n"+str(e))
+#    try:
+    bot.scrape(config['game-outpath'], config['line-outpath'], args.config)
+#    except Exception as e:
+#        bot.notify("WARNING: Exception incountered, restarting scrape process.\n"+str(e))
