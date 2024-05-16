@@ -30,7 +30,11 @@ class Scraper:
     #        off the mlb.com website. And it helps resolve some double-header edge
     #        cases.
 
-    def __init__(self, alerter):
+    def __init__(self, dumper, generator, alerter):
+        # Dumps data out
+        self.dumper = dumper
+        # Generates game lines
+        self.linegen = generator
         # Issue alerts
         self.alerter = alerter
         #
@@ -38,7 +42,7 @@ class Scraper:
         # Games should transition from: pregame -> live -> final
         # They can not go backward.
         #
-        # Maps: Game ID (str) -> GameState 
+        # Maps: Game ID (str) -> GameState
         self.games = {
                         'pregame': {},
                         'live': {},
@@ -107,7 +111,7 @@ class Scraper:
             # Note: if there are multiple games with a matching prefix, then we choose the
             #       game with the closest start time before the new start time.
             #       (This assumes game times can't be moved forward which might not be true)
-            # 
+            #
             # Fix: Enforce the rule that a game can only be updated once per iteration.
             #      Therefore, if we see the second game in a double header that's been delayed,
             #      then we know to create a new game.
@@ -179,6 +183,63 @@ class Scraper:
         # that have already started.
         # Note: Give a 30min buffer for games that start later than their listed start time.
         gametime = min([start_time for start_time, _ in lines.values() if 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
                             start_time > nowtime-datetime.timedelta(minutes=30)])
         # Calculate the difference in seconds.
         secs = (gametime - nowtime).total_seconds()
@@ -186,20 +247,19 @@ class Scraper:
         # Instead, we want to wait thirty seconds.
         return secs if secs > 0 else 30
 
-    def scrape(self, game_outpath, line_outpath, keyfile):
+    def scrape(self, game_outpath='', line_outpath=''):
         webpage = Soup()
-        linegen = LineGenerator(keyfile, GameState.get_id_prefix)
         while True:
             print(f"---> {datetime.date.today()} {datetime.datetime.now().strftime('%H:%M:%S')}")
-            
+
             # Time the soup was brewed and lines were generated.
             timestamp = datetime.datetime.now()
             # Get current lines.
-            lines = linegen.get_lines()
+            lines = self.linegen.get_lines()
 
             # Initialize updated set to empty at the start of an iteration.
             self.updated = set()
-            
+
             # Each game has its own soup that we must process.
             for soup in webpage.brew():
                 # Get the game id prefix for the game soup
@@ -225,9 +285,9 @@ class Scraper:
                     # Add to updated set.
                     self.updated.add(game.id)
                     # Dump game state and line info
-                    game.dump_state(game_outpath)
+                    self.dumper.dump_state(game)
                     if not game.line_info is None:
-                        game.dump_lines(line_outpath)
+                        self.dumper.dump_lines(game)
                     # Log
                     print('---------------------------------------------------')
                     print(game)
@@ -267,9 +327,9 @@ class Scraper:
                     self.updated.add(game.id)
                 else:
                     self.notify('WARNING: Couldnt identify the game soup.')
-            
+
             # Print line API usage statistics
-            stats = linegen.usage()
+            stats = self.linegen.usage()
             print('Remaining:', stats[0], ' Used:', stats[1])
 
             # Check for stale live games.
@@ -282,7 +342,7 @@ class Scraper:
                     self.notify(f"""WARNING: {game.id} hasn't been updated in 5 hours.\n
                                     Transitioning from live to final.""")
                     self.transition(game.id, 'live', 'final')
-            
+
             # Determine wait time.
             # If we don't have a current game going, then wait for the next to start (or wait two hours).
             if not self.games['live']:

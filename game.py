@@ -46,7 +46,7 @@ class GameState:
         return prefix + suffix
 
 
-    def __init__(self, id):
+    def __init__(self, id, dump_to_sql=False):
         # Id
         self.id = id
         self.date = datetime.date.today()
@@ -65,6 +65,8 @@ class GameState:
         self.count = (None, None)
         # Line information
         self.line_info = None
+        # Write to a MySQL DB (to CSV if not enabled)
+        self.enable_sql = dump_to_sql
 
     def update(self, timestamp, new_state, new_lines):
         self.timestamp = timestamp
@@ -83,7 +85,10 @@ class GameState:
         self.pitcher = new_state['pitcher']
         self.count = new_state['count']
 
-    def dump(self, path, row):
+    def dump_to_sql(self, db_cursor, rtype, row):
+        assert(rtype in ('state', 'lines'))
+
+    def dump_to_csv(self, path, row):
         filename = path+f'/{self.id}.csv'
         if os.path.exists(filename):
             df = pd.read_csv(filename)
@@ -91,6 +96,9 @@ class GameState:
             df.to_csv(filename, index=False)
         else:
             row.to_frame().T.to_csv(filename, index=False)
+
+    def dump(self, *argv):
+        self.dump_to_sql(argv[0], argv[1], argv[2]) if self.enable_sql else self.dump_to_csv(argv[0], argv[1])
 
     def dump_state(self, path):
         row = pd.Series({'timestamp': self.timestamp,

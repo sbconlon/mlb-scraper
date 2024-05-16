@@ -8,3 +8,6 @@ notebooks/
 # Personal
 my_config.yaml
 my-config.yaml
+
+# Virtual environment
+.venv

@@ -6,8 +6,9 @@ import re
 import requests
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service as ChromeService
-import time
 from webdriver_manager.chrome import ChromeDriverManager
+import time
+#from webdriver_manager.chrome import ChromeDriverManager
 
 class Soup:
 
@@ -25,13 +26,24 @@ class Soup:
         return soup.find('main'
                         ).find('div', {'id': 'scores-schedule-root'}
                         ).find_all('div', {'data-test-mlb': 'singleGameContainer'})
-    
+
     def open(self):
         options = webdriver.ChromeOptions()
         options.add_argument('log-level=3')
         options.add_argument('--headless')
-        self.driver = webdriver.Chrome(ChromeDriverManager().install(),
+        options.add_argument('--disable-dev-shm-usage') # Only for Ubuntu (?)
+        options.add_argument('--no-sandbox')            # Only for Ubuntu (?)
+#        options.add_argument('--disable-gpu')
+#        options.add_argument('--disable-software-rasterizer')
+#        options.add_argument('enable-automation')
+#        options.add_argument('--disable-infobars')
+        self.driver = webdriver.Chrome(service=ChromeService(ChromeDriverManager().install()),
                                        options=options)
+#       self.driver = webdriver.Chrome(options=options)
+#        self.driver = webdriver.Remote(
+#            desired_capabilities=webdriver.DesiredCapabilities.CHROME.copy(),
+#            command_executor='http://13.52.211.102:4444/wd/hub'
+#        )
         self.driver.implicitly_wait(5)
         self.driver.get(Soup.url)
 

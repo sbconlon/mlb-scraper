@@ -19,9 +19,8 @@ class LineGenerator:
                       'DATE_FORMAT': 'iso'             # iso | unix
                      }
 
-    def __init__(self, keyfile, id_prefix_func, params=default_params):
-        with open(keyfile, 'r') as yamlfile:
-            self.key = yaml.load(yamlfile, Loader=yaml.FullLoader)['api-key']
+    def __init__(self, key, id_prefix_func=GameState.get_id_prefix, params=default_params):
+        self.key = key
         self.params = params
         self.remaining, self.used = -1, -1   # unkown at initialization time
         self.get_id_prefix = id_prefix_func
