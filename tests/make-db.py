@@ -73,6 +73,41 @@ if __name__ == '__main__':
                              strikes SMALLINT)
     """)
 
+    cursor.execute(
+    """
+        CREATE TABLE h2h(id INT AUTO_INCREMENT PRIMARY KEY,
+                         game_id VARCHAR(255),
+                         bookmaker VARCHAR(255),
+                         timestamp DATETIME,
+                         last DATETIME,
+                         H_price DOUBLE,
+                         A_price DOUBLE)
+    """)
+
+    cursor.execute(
+    """
+        CREATE TABLE spreads(id INT AUTO_INCREMENT PRIMARY KEY,
+                             game_id VARCHAR(255),
+                             bookmaker VARCHAR(255),
+                             timestamp DATETIME,
+                             last DATETIME,
+                             H_price DOUBLE,
+                             H_point DOUBLE,
+                             A_price DOUBLE,
+                             A_point DOUBLE)
+    """)
+
+    cursor.execute(
+    """
+        CREATE TABLE totals(id INT AUTO_INCREMENT PRIMARY KEY,
+                            game_id VARCHAR(255),
+                            bookmaker VARCHAR(255),
+                            timestamp DATETIME,
+                            last DATETIME,
+                            U_price DOUBLE,
+                            U_point DOUBLE)
+    """)
+
     cursor.execute("SHOW TABLES")
 
     print('--> Created the tables')
