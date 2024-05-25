@@ -11,3 +11,6 @@ my-config.yaml
 
 # Virtual environment
 .venv
+
+# No hang up output
+nohup.out

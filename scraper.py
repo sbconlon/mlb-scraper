@@ -8,7 +8,6 @@ from soup import Soup, SoupParser
 from game import GameState
 from lines import LineGenerator
 
-
 class Scraper:
 
     # Key assumptions:
@@ -30,13 +29,15 @@ class Scraper:
     #        off the mlb.com website. And it helps resolve some double-header edge
     #        cases.
 
-    def __init__(self, dumper, generator, alerter):
+    def __init__(self, dumper, generator, alerter, logger):
         # Dumps data out
         self.dumper = dumper
         # Generates game lines
         self.linegen = generator
         # Issue alerts
         self.alerter = alerter
+        # Log
+        self.logger = logger
         #
         # Game states
         # Games should transition from: pregame -> live -> final
@@ -51,10 +52,9 @@ class Scraper:
         # Set of ids for games that have been updated this iteration.
         self.updated = set()
 
-    # This function prints the given message to the console
-    # and issues an alert.
+    # This function logs and issues an alert.
     def notify(self, message):
-        print(message)
+        self.logger.log(message)
         self.alerter.alert(message)
 
     # The lookup functions take a game prefix and match it to a game in the
@@ -247,10 +247,10 @@ class Scraper:
         # Instead, we want to wait thirty seconds.
         return secs if secs > 0 else 30
 
-    def scrape(self, game_outpath='', line_outpath=''):
+    def scrape(self):
         webpage = Soup()
         while True:
-            print(f"---> {datetime.date.today()} {datetime.datetime.now().strftime('%H:%M:%S')}")
+            self.logger.log(f"---> {datetime.date.today()} {datetime.datetime.now().strftime('%H:%M:%S')}")
 
             # Time the soup was brewed and lines were generated.
             timestamp = datetime.datetime.now()
@@ -289,9 +289,9 @@ class Scraper:
                     if not game.line_info is None:
                         self.dumper.dump_lines(game)
                     # Log
-                    print('---------------------------------------------------')
-                    print(game)
-                    print()
+                    self.logger.log('---------------------------------------------------')
+                    self.logger.log(str(game))
+                    self.logger.log()
                 #
                 # Parse pre game info
                 elif SoupParser.is_pregame(soup):
@@ -306,7 +306,7 @@ class Scraper:
                     self.updated.add(game.id)
                 #
                 # Parse post game or postponed game info.
-                elif (SoupParser.is_final(soup) or 
+                elif (SoupParser.is_final(soup) or
                       SoupParser.is_postponed(soup) or
                       SoupParser.is_suspended(soup)):
                     # Find the GameState for the corresponding prefix
@@ -330,10 +330,10 @@ class Scraper:
 
             # Print line API usage statistics
             stats = self.linegen.usage()
-            print('Remaining:', stats[0], ' Used:', stats[1])
+            self.logger.log('Remaining: ' + str(stats[0]) + ' Used: ' + str(stats[1]))
 
             # Check for stale live games.
-            for game in self.games['live'].values(): 
+            for game in self.games['live'].values():
                 # If a game in the live bucket hasn't been updated in a hour, then issue an alert.
                 if (datetime.datetime.now() - game.timestamp).total_seconds() > 3600:
                     self.notify(f"WARNING: {game.id} hasnt been updated in over an hour")
@@ -353,7 +353,7 @@ class Scraper:
             else:
                 wait_time = 60
             # Close the webpage while we sleep
-            if wait_time > 60: 
+            if wait_time > 60:
                 webpage.close()
             # Sleep
             time.sleep(wait_time)

@@ -14,6 +14,8 @@ class Soup:
 
     url = 'https://www.mlb.com/scores'
 
+    max_attempts = 5 # Number of brew attempts before throwing an error.
+
     def __init__(self):
         # Raspberry Pi driver substitution
         #service = ChromeService(executable_path='/usr/bin/chromedriver') 
@@ -22,7 +24,17 @@ class Soup:
         self.open()
 
     def brew(self):
-        soup = bs.BeautifulSoup(self.driver.page_source, 'html.parser')
+        attempts = 0
+        while attempts < Soup.max_attempts:
+            try:
+                soup = bs.BeautifulSoup(self.driver.page_source, 'html.parser')
+                break
+            except Exception as e:
+                self.open()
+                attempt += 1
+                print(e)
+        if attempts >= Soup.max_attempts:
+            assert(False)
         return soup.find('main'
                         ).find('div', {'id': 'scores-schedule-root'}
                         ).find_all('div', {'data-test-mlb': 'singleGameContainer'})
