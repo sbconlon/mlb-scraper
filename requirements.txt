@@ -1,3 +1,7 @@
 beautifulsoup4
+mysql-connector-python
+requests
 selenium
 pandas
+pyyaml
+webdriver-manager

@@ -178,8 +178,8 @@ class Scraper:
     # With a 30 min buffer for late start games, in which case 30 secs is returned.
     def time_until_next_game(self, lines):
         # Get the current time, in eastern timezone.
-        nowtime = datetime.datetime.now().astimezone(pytz.timezone('US/Eastern'))
-        # Get the next game start time, in eastern timezone, filtered s.t. we exclude games
+        nowtime = datetime.datetime.now().astimezone(pytz.timezone('US/Pacific'))
+        # Get the next game start time, in pacific timezone, filtered s.t. we exclude games
         # that have already started.
         # Note: Give a 30min buffer for games that start later than their listed start time.
         gametime = min([start_time for start_time, _ in lines.values() if 
@@ -248,12 +248,13 @@ class Scraper:
         return secs if secs > 0 else 30
 
     def scrape(self):
+        tz = pytz.timezone('US/Pacific')
         webpage = Soup()
         while True:
-            self.logger.log(f"---> {datetime.date.today()} {datetime.datetime.now().strftime('%H:%M:%S')}")
+            self.logger.log(f"---> {datetime.datetime.now(tz).strftime('%m/%d/%Y')} {datetime.datetime.now(tz).strftime('%H:%M:%S')}")
 
             # Time the soup was brewed and lines were generated.
-            timestamp = datetime.datetime.now()
+            timestamp = datetime.datetime.now(tz)
             # Get current lines.
             lines = self.linegen.get_lines()
 
@@ -333,21 +334,21 @@ class Scraper:
             self.logger.log('Remaining: ' + str(stats[0]) + ' Used: ' + str(stats[1]))
 
             # Check for stale live games.
-            for game in self.games['live'].values():
+            cpy_live_games = self.games['live'].values()
+            for game in cpy_live_games:
                 # If a game in the live bucket hasn't been updated in a hour, then issue an alert.
-                if (datetime.datetime.now() - game.timestamp).total_seconds() > 3600:
+                if (datetime.datetime.now(tz) - game.timestamp.replace(tzinfo=tz)).total_seconds() > 3600:
                     self.notify(f"WARNING: {game.id} hasnt been updated in over an hour")
                 # If a game in the live bucket hasn't been updated in 5 hours, then drop it to the final bucket.
-                if (datetime.datetime.now() - game.timestamp).total_seconds() > 5*3600:
-                    self.notify(f"""WARNING: {game.id} hasn't been updated in 5 hours.\n
-                                    Transitioning from live to final.""")
+                if (datetime.datetime.now(tz) - game.timestamp.replace(tzinfo=tz)).total_seconds() > 5*3600:
+                    self.notify(f"WARNING: {game.id} hasn't been updated in 5 hours.\nTransitioning from live to final.")
                     self.transition(game.id, 'live', 'final')
 
             # Determine wait time.
             # If we don't have a current game going, then wait for the next to start (or wait two hours).
             if not self.games['live']:
                 wait_time = self.time_until_next_game(lines)
-                wakeup_time = datetime.datetime.now() + datetime.timedelta(seconds=wait_time)
+                wakeup_time = datetime.datetime.now(tz) + datetime.timedelta(seconds=wait_time)
                 self.notify(f"""No live games, sleeping {wait_time} seconds.\nWakeup time at {wakeup_time.strftime('%Y-%m-%d %H:%M:%S')}""")
             # Else, pause for a minute, then continue scraping.
             else:

@@ -31,7 +31,7 @@ class Soup:
                 break
             except Exception as e:
                 self.open()
-                attempt += 1
+                attempts += 1
                 print(e)
         if attempts >= Soup.max_attempts:
             assert(False)

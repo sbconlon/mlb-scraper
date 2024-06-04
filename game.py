@@ -1,5 +1,6 @@
 import datetime
 import pandas as pd
+import pytz
 import os
 
 
@@ -49,7 +50,7 @@ class GameState:
     def __init__(self, id, dump_to_sql=False):
         # Id
         self.id = id
-        self.date = datetime.date.today()
+        self.date = datetime.datetime.now(pytz.timezone('US/Eastern'))
         self.teams = ['', ''] # away, home
         self.start_time = None
         self.is_final = None
