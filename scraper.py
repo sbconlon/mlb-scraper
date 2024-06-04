@@ -183,63 +183,6 @@ class Scraper:
         # that have already started.
         # Note: Give a 30min buffer for games that start later than their listed start time.
         gametime = min([start_time for start_time, _ in lines.values() if 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
                             start_time > nowtime-datetime.timedelta(minutes=30)])
         # Calculate the difference in seconds.
         secs = (gametime - nowtime).total_seconds()

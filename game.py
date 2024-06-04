@@ -32,7 +32,7 @@ class GameState:
     # Get game id prefix.
     # Prefix = home team id + date
     def get_id_prefix(name, strt_time=None):
-        strt_time = datetime.date.today() if strt_time == None else strt_time
+        strt_time = datetime.datetime.now(pytz.timezone('US/Pacific')) if strt_time == None else strt_time
         return GameState.get_team_id(name) + strt_time.strftime('%Y%m%d')
 
     # Make a game id for a new game, given the prefix.
@@ -50,7 +50,7 @@ class GameState:
     def __init__(self, id, dump_to_sql=False):
         # Id
         self.id = id
-        self.date = datetime.datetime.now(pytz.timezone('US/Eastern'))
+        self.date = datetime.datetime.now(pytz.timezone('US/Pacific'))
         self.teams = ['', ''] # away, home
         self.start_time = None
         self.is_final = None
